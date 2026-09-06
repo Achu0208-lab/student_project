@@ -5,7 +5,7 @@ with ar.container():
 username = ar.text_input("Username")
 password = ar.text_input("Password", type="password")
 if ar.button("Login"):
-    if username == "admin" and password == "password":
-        ar.success("Login successful!")
+    if username == "ASHWIN" and password == "Achu@2008":
+        ar.success("login successful! and welcome to Ashwin's world.")
     else:
-        ar.error("Invalid username or password.")
+        ar.error("user name and password check pannu pa thambi.")
