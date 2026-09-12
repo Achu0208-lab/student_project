@@ -1,77 +1,109 @@
-import tkinter as tk
-from tkinter import messagebox
+import sqlite3
+import streamlit as ar
 
-root = tk.Tk()
-root.title("Login and Signup App")
-root.configure(bg="#121212")
-root.geometry("400x400")
+def init_db():
+    """Create database file and user table if it doesn't exist."""
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            username TEXT PRIMARY KEY,
+            password TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
-# Functions
-def show_login():
-    signup_frame.pack_forget()
-    login_frame.pack(pady=20)
+def add_user(username, password):
+    """Add a new user to the database."""
+    try:
+        conn = sqlite3.connect("users.db")
+        c = conn.cursor()
+        c.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, password))
+        conn.commit()
+        conn.close()
+        return True
+    except sqlite3.IntegrityError:
+        # Username already exists
+        return False
 
-def show_signup():
-    login_frame.pack_forget()
-    signup_frame.pack(pady=20)
+def verify_user(username, password):
+    """Check if username and password match."""
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    c.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
+    user = c.fetchone()
+    conn.close()
+    return user is not None
 
-def toggle_password(entry, btn):
-    if entry.cget("show") == "":
-        entry.config(show="*")
-        btn.config(text="👁️")
-    else:
-        entry.config(show="")
-        btn.config(text="🙈")
 
-def login():
-    user = login_user.get()
-    pwd = login_pass.get()
-    messagebox.showinfo("Login", f"Logging in with Username: {user}, Password: {pwd}")
+# Initialize database when app starts
+init_db()
 
-def signup():
-    user = signup_user.get()
-    pwd = signup_pass.get()
-    messagebox.showinfo("Signup", f"Signing up with Username: {user}, Password: {pwd}")
+ar.set_page_config(page_title="Login and Signup App", page_icon="🔒", layout="centered")
 
-# Title
-title = tk.Label(root, text="🔒 Login and Signup App", fg="white", bg="#121212", font=("Arial", 16))
-title.pack(pady=10)
+# Custom CSS for dark theme UI (Completed and Fixed)
+ar.markdown("""
+    <style>
+    .stApp {
+        background-color: #0e1117;
+        color: #ffffff;
+    }
+    .main-title {
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+    div.stButton > button[kind="primary"] {
+        background-color: #ff4b4b !important;
+        color: white !important;
+        border-radius: 6px;
+        border: none;
+        height: 42px;
+        font-weight: 600;
+        width: 100%;
+    }
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        border: 1px solid #262933 !important;
+        border-radius: 8px;
+        padding: 2rem;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# Buttons
-btn_login = tk.Button(root, text="🔑 Go to Login", bg="#e53935", fg="white", command=show_login)
-btn_login.pack(pady=5)
+ar.markdown('<div class="main-title">Account Portal</div>', unsafe_allow_html=True)
 
-btn_signup = tk.Button(root, text="📄 Go to Sign Up", bg="#333", fg="white", command=show_signup)
-btn_signup.pack(pady=5)
+# Tabs to separate Login and Registration forms
+tab1, tab2 = ar.tabs(["🔑 Login", "📝 Sign Up"])
 
-# Login Frame
-login_frame = tk.Frame(root, bg="#1e1e1e")
-tk.Label(login_frame, text="Login Section", fg="#e53935", bg="#1e1e1e", font=("Arial", 14)).pack(pady=10)
+with tab1:
+    ar.subheader("Sign In")
+    login_user = ar.text_input("Username", key="login_username")
+    login_pass = ar.text_input("Password", type="password", key="login_password")
+    
+    if ar.button("Log In", type="primary", key="login_btn"):
+        if login_user and login_pass:
+            if verify_user(login_user, login_pass):
+                ar.success(f"Welcome back, {login_user}!")
+            else:
+                ar.error("Invalid username or password.")
+        else:
+            ar.warning("Please fill out all fields.")
 
-login_user = tk.Entry(login_frame, width=30)
-login_user.insert(0, "👤 Username")
-login_user.pack(pady=5)
-
-login_pass = tk.Entry(login_frame, width=25, show="*")
-login_pass.pack(side="left", padx=5, pady=5)
-login_toggle = tk.Button(login_frame, text="👁️", command=lambda: toggle_password(login_pass, login_toggle))
-login_toggle.pack(side="left")
-
-tk.Button(login_frame, text="Login", bg="#333", fg="white", command=login).pack(pady=10)
-
-# Signup Frame
-signup_frame = tk.Frame(root, bg="#1e1e1e")
-tk.Label(signup_frame, text="Signup Section", fg="#e53935", bg="#1e1e1e", font=("Arial", 14)).pack(pady=10)
-
-signup_user = tk.Entry(signup_frame, width=30)
-signup_user.insert(0, "👤 Username")
-signup_user.pack(pady=5)
-
-signup_pass = tk.Entry(signup_frame, width=25, show="*")
-signup_pass.pack(side="left", padx=5, pady=5)
-signup_toggle = tk.Button(signup_frame, text="👁️", command=lambda: toggle_password(signup_pass, signup_toggle))
-signup_toggle.pack(side="left")
-
-tk.Button(signup_frame, text="Sign Up", bg="#333", fg="white", command=signup).pack(pady=10)
-
-root.mainloop()
+with tab2:
+    ar.subheader("Register Account")
+    new_user = ar.text_input("Choose a Username", key="signup_username")
+    new_pass = ar.text_input("Choose a Password", type="password", key="signup_password")
+    confirm_pass = ar.text_input("Confirm Password", type="password", key="confirm_password")
+    
+    if ar.button("Register", type="primary", key="signup_btn"):
+        if new_user and new_pass and confirm_pass:
+            if new_pass != confirm_pass:
+                ar.error("Passwords do not match.")
+            elif add_user(new_user, new_pass):
+                ar.success("Registration successful! You can now switch to the Log In tab.")
+            else:
+                ar.error("That username is already taken.")
+        else:
+            ar.warning("Please fill out all fields.")
